@@ -26,7 +26,8 @@
             android:layout_marginBottom="16dp"
             android:fontFamily="sans-serif-light"
             android:text="@string/login_progress_signing_in"
-            android:textAppearance="?android:attr/textAppearanceMedium" />
+            android:textAppearance="?android:attr/textAppearanceMedium"
+             />
     </LinearLayout>
 
     <!-- Login form -->
@@ -62,14 +63,15 @@
                 android:singleLine="true" />
 
             <Button
-                android:id="@+id/sign_in_button"
+                android:id="@+id/login_btn"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="right"
                 android:layout_marginTop="16dp"
                 android:paddingLeft="32dp"
                 android:paddingRight="32dp"
-                android:text="@string/action_sign_in_register" />
+                android:text="@string/action_entrar" />
+
         </LinearLayout>
     </ScrollView>
 

@@ -8,39 +8,23 @@ package br.com.fsilveira.onroute_mobile.directions;
  * 
  */
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+import java.util.ArrayList;
+
 import android.os.AsyncTask;
 
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.PolylineOptions;
 
-import java.util.ArrayList;
-import java.util.List;
-
-public class Routing extends AsyncTask<LatLng, Void, Route> {
+public class Routing<T> extends AsyncTask<T, Void, Route> {
 	protected ArrayList<RoutingListener> _aListeners;
 	protected TravelMode _mTravelMode;
 
-	public enum TravelMode {
-		BIKING("biking"), DRIVING("driving"), WALKING("walking"), TRANSIT("transit");
-
-		protected String _sValue;
-
-		private TravelMode(String sValue) {
-			this._sValue = sValue;
-		}
-
-		protected String getValue() {
-			return _sValue;
-		}
-	}
-
-	public Routing(TravelMode mTravelMode) {
+	public Routing(TravelMode mTravelMode, RoutingListener listener) {
 		this._aListeners = new ArrayList<RoutingListener>();
+		_aListeners.add(listener);
 		this._mTravelMode = mTravelMode;
-	}
-
-	public void registerListener(RoutingListener mListener) {
-		_aListeners.add(mListener);
 	}
 
 	protected void dispatchOnStart() {
@@ -49,15 +33,15 @@ public class Routing extends AsyncTask<LatLng, Void, Route> {
 		}
 	}
 
-	protected void dispatchOnFailure() {
+	protected void dispatchOnFailure(DirectionsException e) {
 		for (RoutingListener mListener : _aListeners) {
-			mListener.onRoutingFailure();
+			mListener.onRoutingFailure(e);
 		}
 	}
 
-	protected void dispatchOnSuccess(PolylineOptions mOptions) {
+	protected void dispatchOnSuccess(PolylineOptions mOptions, Route route) {
 		for (RoutingListener mListener : _aListeners) {
-			mListener.onRoutingSuccess(mOptions);
+			mListener.onRoutingSuccess(mOptions, route);
 		}
 	}
 
@@ -68,26 +52,31 @@ public class Routing extends AsyncTask<LatLng, Void, Route> {
 	 * @return
 	 */
 	@Override
-	protected Route doInBackground(LatLng... aPoints) {
-		for (LatLng mPoint : aPoints) {
+	protected Route doInBackground(T... aPoints) {
+		for (T mPoint : aPoints) {
 			if (mPoint == null)
 				return null;
 		}
 
-		return new GoogleParser(constructURL(aPoints)).parse();
+		try {
+			return new GoogleParser(constructURL(aPoints)).parse();
+		} catch (DirectionsException e) {
+			dispatchOnFailure(e);
+		} catch (UnsupportedEncodingException e) {
+			dispatchOnFailure(new DirectionsException(e));
+		}
+		return null;
 	}
 
-	protected String constructURL(LatLng... points) {
-		LatLng start = points[0];
-		LatLng dest = points[points.length - 1];
+	protected String constructURL(T... points) throws UnsupportedEncodingException {
+		T start = points[0];
+		T dest = points[points.length - 1];
 
 		StringBuilder wayPoints = new StringBuilder();
 		for (int index = 0; index < points.length; index++) {
 			if (index != 0 && index != (points.length - 1)) {
 				wayPoints.append((wayPoints.length() > 0) ? "|" : "");
-				wayPoints.append(points[index].latitude);
-				wayPoints.append(',');
-				wayPoints.append(points[index].longitude);
+				wayPoints.append(getPoint(points[index]));
 			}
 		}
 
@@ -95,18 +84,27 @@ public class Routing extends AsyncTask<LatLng, Void, Route> {
 
 		final StringBuffer mBuf = new StringBuffer(sJsonURL);
 		mBuf.append("origin=");
-		mBuf.append(start.latitude);
-		mBuf.append(',');
-		mBuf.append(start.longitude);
+		mBuf.append(URLEncoder.encode(getPoint(start), "UTF-8"));
 		mBuf.append("&destination=");
-		mBuf.append(dest.latitude);
-		mBuf.append(',');
-		mBuf.append(dest.longitude);
-		mBuf.append((wayPoints.length() > 0) ? "&waypoints=" + wayPoints : "");
+		mBuf.append(URLEncoder.encode(getPoint(dest), "UTF-8"));
+		mBuf.append((wayPoints.length() > 0) ? "&waypoints=" + URLEncoder.encode(wayPoints.toString(), "UTF-8") : "");
 		mBuf.append("&sensor=true&mode=");
 		mBuf.append(_mTravelMode.getValue());
 
 		return mBuf.toString();
+	}
+
+	private String getPoint(T pointt) {
+		StringBuilder str = new StringBuilder();
+		if (pointt instanceof LatLng) {
+			LatLng point = (LatLng) pointt;
+			str.append(point.latitude);
+			str.append(',');
+			str.append(point.longitude);
+		} else {
+			str.append(pointt);
+		}
+		return str.toString();
 	}
 
 	@Override
@@ -115,17 +113,18 @@ public class Routing extends AsyncTask<LatLng, Void, Route> {
 	}
 
 	@Override
-	protected void onPostExecute(Route result) {
-		if (result == null) {
-			dispatchOnFailure();
+	protected void onPostExecute(Route route) {
+		if (route == null) {
+			dispatchOnFailure(null);
 		} else {
 			PolylineOptions mOptions = new PolylineOptions();
 
-			for (LatLng point : result.getPoints()) {
+			for (LatLng point : route.getPoints()) {
+				 System.out.println(point);
 				mOptions.add(point);
 			}
 
-			dispatchOnSuccess(mOptions);
+			dispatchOnSuccess(mOptions, route);
 		}
 	}// end onPostExecute method
 }
