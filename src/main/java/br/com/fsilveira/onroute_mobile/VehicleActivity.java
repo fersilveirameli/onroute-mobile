@@ -1,12 +1,13 @@
 package br.com.fsilveira.onroute_mobile;
 
 import java.util.List;
-
+import android.annotation.SuppressLint;
 import android.app.ListActivity;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.PowerManager;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,18 +15,22 @@ import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 import br.com.fsilveira.onroute_mobile.api.TaskVechicleAPI;
+import br.com.fsilveira.onroute_mobile.listener.VehicleListener;
 import br.com.fsilveira.onroute_mobile.model.Vehicle;
-import br.com.fsilveira.onroute_mobile.vehicle.VehicleListener;
 
 public class VehicleActivity extends ListActivity implements VehicleListener {
 
 	private TaskVechicleAPI vechicleAPI;
 	private VehicleAdapter dataAdapter;
+	protected PowerManager.WakeLock mWakeLock;
 
+	@SuppressLint("Wakelock")
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-//		setContentView(R.layout.activity_vehicle);
+		final PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+		this.mWakeLock = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, "My Tag");
+		this.mWakeLock.acquire();
 
 		vechicleAPI = new TaskVechicleAPI(this);
 		vechicleAPI.execute();
@@ -102,7 +107,7 @@ public class VehicleActivity extends ListActivity implements VehicleListener {
 
 			prefix.setText(vehicle.getPrefix());
 			mark.setText(vehicle.getMark());
-			type.setText("("+vehicle.getType()+")");
+			type.setText("(" + vehicle.getType() + ")");
 			return vi;
 		}
 

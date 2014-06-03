@@ -2,25 +2,35 @@ package br.com.fsilveira.onroute_mobile;
 
 import br.com.fsilveira.onroute_mobile.model.Travel;
 import br.com.fsilveira.onroute_mobile.model.Vehicle;
+import android.annotation.SuppressLint;
 import android.app.ActionBar;
 import android.app.Activity;
 import android.app.Fragment;
 import android.app.FragmentManager;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.PowerManager;
 import android.support.v4.widget.DrawerLayout;
 import android.view.Menu;
 import android.view.MenuItem;
 
+@SuppressLint("Wakelock")
 public class MainActivity extends Activity implements NavigationDrawerFragment.NavigationDrawerCallbacks {
 
 	private NavigationDrawerFragment mNavigationDrawerFragment;
 	private CharSequence mTitle;
 	private Travel travel = new Travel();
+	protected PowerManager.WakeLock mWakeLock;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+
+		final PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+		this.mWakeLock = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, "My Tag");
+		this.mWakeLock.acquire();
+
 		setContentView(R.layout.activity_main);
 
 		mTitle = getTitle();

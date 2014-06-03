@@ -17,9 +17,9 @@ import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 import br.com.fsilveira.onroute_mobile.api.TaskTravelAPI;
+import br.com.fsilveira.onroute_mobile.listener.TravelListener;
 import br.com.fsilveira.onroute_mobile.model.Travel;
 import br.com.fsilveira.onroute_mobile.model.Vehicle;
-import br.com.fsilveira.onroute_mobile.travel.TravelListener;
 
 public class TravelFragment extends Fragment implements TravelListener {
 

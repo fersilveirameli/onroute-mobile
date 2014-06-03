@@ -9,38 +9,38 @@ import java.util.List;
 import org.json.JSONException;
 
 import android.os.AsyncTask;
-import br.com.fsilveira.onroute_mobile.listener.TravelListener;
+import br.com.fsilveira.onroute_mobile.listener.PerformedItineraryListener;
+import br.com.fsilveira.onroute_mobile.model.PerformedPoint;
 import br.com.fsilveira.onroute_mobile.model.Travel;
-import br.com.fsilveira.onroute_mobile.model.Vehicle;
-import br.com.fsilveira.onroute_mobile.parser.TravelParser;
+import br.com.fsilveira.onroute_mobile.parser.PerformedItineraryParser;
 
-public class TaskTravelAPI extends AsyncTask<Vehicle, Void, List<Travel>> {
-	protected TravelListener listener;
+public class TaskPerformedItineraryAPI extends AsyncTask<Travel, Void, List<PerformedPoint>> {
+	protected PerformedItineraryListener listener;
 
-	public TaskTravelAPI(TravelListener listener) {
+	public TaskPerformedItineraryAPI(PerformedItineraryListener listener) {
 		this.listener = listener;
 	}
 
 	protected void dispatchOnStart() {
-		listener.onRoutingStart();
+		listener.onItineraryUpdateStart();
 	}
 
 	protected void dispatchOnFailure(String msg) {
-		listener.onRoutingFailure(msg);
+		listener.onItineraryUpdateFailure(msg);
 	}
 
-	protected void dispatchOnSuccess(List<Travel> travels) {
-		listener.onRoutingSuccess(travels);
+	protected void dispatchOnSuccess(List<PerformedPoint> list) {
+		listener.onItineraryUpdateSuccess(list);
 	}
 
 	@Override
-	protected List<Travel> doInBackground(Vehicle... vehicles) {
+	protected List<PerformedPoint> doInBackground(Travel... travels) {
 
-		if (vehicles == null)
+		if (travels == null)
 			return null;
 
 		try {
-			return TravelParser.parse(constructURL(vehicles[0].getId()));
+			return PerformedItineraryParser.parse(constructURL(travels[0].getId()));
 		} catch (JSONException e) {
 			e.printStackTrace();
 			dispatchOnFailure(e.getMessage());
@@ -53,7 +53,7 @@ public class TaskTravelAPI extends AsyncTask<Vehicle, Void, List<Travel>> {
 	protected String constructURL(Integer id) throws ApiException {
 
 		final StringBuffer mBuf = new StringBuffer();
-		mBuf.append(ApiUtil.URL+"/api/veiculos/" + id + "/viagens.json");
+		mBuf.append(ApiUtil.URL + "/api/viagens/" + id + "/itinerario.json");
 
 		try {
 			URL url = new URL(mBuf.toString());
@@ -73,11 +73,11 @@ public class TaskTravelAPI extends AsyncTask<Vehicle, Void, List<Travel>> {
 	}
 
 	@Override
-	protected void onPostExecute(List<Travel> travels) {
-		if (travels == null || travels.size() == 0) {
-			dispatchOnFailure("Nenhuma viagem encontrada");
+	protected void onPostExecute(List<PerformedPoint> points) {
+		if (points == null || points.size() == 0) {
+			dispatchOnFailure("Nenhum itinerário encontrado");
 		} else {
-			dispatchOnSuccess(travels);
+			dispatchOnSuccess(points);
 		}
 	}
 }

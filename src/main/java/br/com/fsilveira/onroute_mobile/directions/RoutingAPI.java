@@ -17,11 +17,11 @@ import android.os.AsyncTask;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.PolylineOptions;
 
-public class Routing<T> extends AsyncTask<T, Void, Route> {
+public class RoutingAPI<T> extends AsyncTask<T, Void, Route> {
 	protected ArrayList<RoutingListener> _aListeners;
 	protected TravelMode _mTravelMode;
 
-	public Routing(TravelMode mTravelMode, RoutingListener listener) {
+	public RoutingAPI(TravelMode mTravelMode, RoutingListener listener) {
 		this._aListeners = new ArrayList<RoutingListener>();
 		_aListeners.add(listener);
 		this._mTravelMode = mTravelMode;
@@ -120,11 +120,11 @@ public class Routing<T> extends AsyncTask<T, Void, Route> {
 			PolylineOptions mOptions = new PolylineOptions();
 
 			for (LatLng point : route.getPoints()) {
-				 System.out.println(point);
+				// System.out.println(point);
 				mOptions.add(point);
 			}
 
 			dispatchOnSuccess(mOptions, route);
 		}
 	}// end onPostExecute method
-}
+}	

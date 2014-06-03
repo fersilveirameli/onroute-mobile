@@ -7,18 +7,20 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Fragment;
 import android.app.FragmentTransaction;
-import android.content.DialogInterface;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import br.com.fsilveira.onroute_mobile.api.TaskPerformedItineraryAPI;
 import br.com.fsilveira.onroute_mobile.directions.DirectionsException;
 import br.com.fsilveira.onroute_mobile.directions.Route;
-import br.com.fsilveira.onroute_mobile.directions.Routing;
+import br.com.fsilveira.onroute_mobile.directions.RoutingAPI;
 import br.com.fsilveira.onroute_mobile.directions.RoutingListener;
 import br.com.fsilveira.onroute_mobile.directions.TravelMode;
+import br.com.fsilveira.onroute_mobile.listener.PerformedItineraryListener;
+import br.com.fsilveira.onroute_mobile.model.PerformedPoint;
 import br.com.fsilveira.onroute_mobile.model.Travel;
 import br.com.fsilveira.onroute_mobile.model.WayPoint;
 
@@ -29,10 +31,11 @@ import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
 
-public class MapsFragment extends Fragment implements RoutingListener {
+public class MapsFragment extends Fragment implements RoutingListener, PerformedItineraryListener {
 
 	private static final String ARG_SECTION_NUMBER = "section_number";
 
@@ -50,7 +53,12 @@ public class MapsFragment extends Fragment implements RoutingListener {
 
 	protected GoogleMap map;
 	protected List<String> pointsStr = new ArrayList<String>();
-	private Routing<String> routing;
+	private RoutingAPI<String> routingAPI;
+	private TaskPerformedItineraryAPI itineraryAPI;
+	private PolylineOptions polyoptionsRelized;
+	private List<PerformedPoint> performedPoints;
+	private Travel travel;
+	private Marker marker;
 
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -61,7 +69,7 @@ public class MapsFragment extends Fragment implements RoutingListener {
 		TextView name = (TextView) rootView.findViewById(R.id.name);
 		TextView date = (TextView) rootView.findViewById(R.id.date);
 
-		Travel travel = (Travel) getArguments().getSerializable("travel");
+		travel = (Travel) getArguments().getSerializable("travel");
 
 		name.setText(travel.getRoute().getName());
 		date.setText("(" + travel.getDate() + ")");
@@ -74,10 +82,15 @@ public class MapsFragment extends Fragment implements RoutingListener {
 		pointsStr.add(travel.getRoute().getDestination());
 
 		String[] paintsArray = new String[pointsStr.size()];
-		routing = new Routing<String>(TravelMode.DRIVING, this);
-		routing.execute(pointsStr.toArray(paintsArray));
+		routingAPI = new RoutingAPI<String>(TravelMode.DRIVING, this);
+		routingAPI.execute(pointsStr.toArray(paintsArray));
 
 		return rootView;
+	}
+
+	private void update(Travel travel) {
+		itineraryAPI = new TaskPerformedItineraryAPI(MapsFragment.this);
+		itineraryAPI.execute(travel);
 	}
 
 	@Override
@@ -97,11 +110,83 @@ public class MapsFragment extends Fragment implements RoutingListener {
 	}
 
 	public void onRoutingSuccess(PolylineOptions mPolyOptions, Route route) {
-		PolylineOptions polyoptions = new PolylineOptions();
-		polyoptions.color(Color.BLUE);
-		polyoptions.width(10);
-		polyoptions.addAll(mPolyOptions.getPoints());
-		map.addPolyline(polyoptions);
+		buildPlanning(mPolyOptions, route);
+		buildRealized();
+	}
+
+	public void buildRealized() {
+
+		polyoptionsRelized = new PolylineOptions();
+		polyoptionsRelized.color(Color.RED);
+		polyoptionsRelized.width(8);
+
+		map.addPolyline(polyoptionsRelized);
+
+		Thread thread = new Thread() {
+			@Override
+			public void run() {
+
+				while (true) {
+					System.out.println("exec");
+					update(travel);
+					try {
+						Thread.sleep(10000);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+			}
+		};
+		thread.start();
+
+	}
+
+	public void onItineraryUpdateSuccess(List<PerformedPoint> list) {
+		performedPoints = list;
+		polyoptionsRelized = new PolylineOptions();
+		for (PerformedPoint point : list) {
+			polyoptionsRelized.add(point.getLatLng());
+		}
+
+		polyoptionsRelized.color(Color.RED);
+		polyoptionsRelized.width(8);
+
+		map.addPolyline(polyoptionsRelized);
+
+		LatLng currentPosition = performedPoints.get(performedPoints.size() - 1).getLatLng();
+		updatePosition(currentPosition);
+
+	}
+
+	private void updatePosition(LatLng currentPosition) {
+		if (marker == null) {
+			MarkerOptions options = new MarkerOptions();
+			options.position(currentPosition);
+			marker = map.addMarker(options);
+			options.icon(BitmapDescriptorFactory.defaultMarker());
+		} else {
+			marker.setPosition(currentPosition);
+		}
+
+		zoom(currentPosition, 13);
+	}
+
+	private void zoom(LatLng currentPosition, float zoomTo) {
+		CameraUpdate center = CameraUpdateFactory.newLatLng(currentPosition);
+		CameraUpdate zoom = CameraUpdateFactory.zoomTo(zoomTo);
+
+		map.moveCamera(center);
+		map.animateCamera(zoom);
+	}
+
+	private void buildPlanning(PolylineOptions mPolyOptions, Route route) {
+		PolylineOptions polyoptionsPlanning = new PolylineOptions();
+		polyoptionsPlanning.color(Color.BLUE);
+		polyoptionsPlanning.width(10);
+		polyoptionsPlanning.addAll(mPolyOptions.getPoints());
+		map.addPolyline(polyoptionsPlanning);
+
+		// map.setTrafficEnabled(true);
 
 		int index = 0;
 		for (LatLng point : route.getMarkers()) {
@@ -124,26 +209,9 @@ public class MapsFragment extends Fragment implements RoutingListener {
 			index++;
 		}
 
-		List<LatLng> performedPoints = getPerformedPoints();
-
-		PolylineOptions polyoptions3 = new PolylineOptions();
-		polyoptions3.color(Color.RED);
-		polyoptions3.width(8);
-		polyoptions3.addAll(performedPoints);
-		map.addPolyline(polyoptions3);
-
-		// CameraUpdate center = CameraUpdateFactory.newLatLng(new LatLng(-27.7994928, -49.487481));
-		LatLng currentPosition = performedPoints.get(performedPoints.size() - 1);
-		MarkerOptions options = new MarkerOptions();
-		options.position(currentPosition);
-		options.icon(BitmapDescriptorFactory.defaultMarker());
-		map.addMarker(options);
-		CameraUpdate center = CameraUpdateFactory.newLatLng(currentPosition);
-		CameraUpdate zoom = CameraUpdateFactory.zoomTo(15);
-
-		map.moveCamera(center);
-		map.animateCamera(zoom);
-
+		if (index > 0) {
+			zoom(route.getMarkers().get(0), 7);
+		}
 	}
 
 	public void onRoutingFailure(DirectionsException e) {
@@ -785,5 +853,15 @@ public class MapsFragment extends Fragment implements RoutingListener {
 		latLngs.add(new LatLng(-27.5666, -48.50537));
 		latLngs.add(new LatLng(-27.56657, -48.50535));
 		return latLngs;
+	}
+
+	public void onItineraryUpdateFailure(String msg) {
+		// TODO Auto-generated method stub
+
+	}
+
+	public void onItineraryUpdateStart() {
+		// TODO Auto-generated method stub
+
 	}
 }

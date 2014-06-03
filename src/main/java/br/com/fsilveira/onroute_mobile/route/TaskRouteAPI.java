@@ -14,7 +14,7 @@ import java.util.List;
 import org.json.JSONException;
 
 import android.os.AsyncTask;
-import br.com.fsilveira.onroute_mobile.directions.Routing;
+import br.com.fsilveira.onroute_mobile.directions.RoutingAPI;
 import br.com.fsilveira.onroute_mobile.directions.RoutingListener;
 import br.com.fsilveira.onroute_mobile.directions.TravelMode;
 import br.com.fsilveira.onroute_mobile.model.Travel;

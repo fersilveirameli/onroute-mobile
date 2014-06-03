@@ -17,9 +17,9 @@ import java.util.List;
 import org.json.JSONException;
 
 import android.os.AsyncTask;
+import br.com.fsilveira.onroute_mobile.listener.VehicleListener;
 import br.com.fsilveira.onroute_mobile.model.Vehicle;
 import br.com.fsilveira.onroute_mobile.parser.VehicleParser;
-import br.com.fsilveira.onroute_mobile.vehicle.VehicleListener;
 
 public class TaskVechicleAPI extends AsyncTask<String, Void, List<Vehicle>> {
 	protected VehicleListener listener;
@@ -56,15 +56,17 @@ public class TaskVechicleAPI extends AsyncTask<String, Void, List<Vehicle>> {
 	protected String constructURL() throws ApiException {
 
 		final StringBuffer mBuf = new StringBuffer();
-		mBuf.append("http://onroute.apiary-mock.com/api/veiculos");
+		mBuf.append(ApiUtil.URL+"/veiculos.json");
 
 		try {
 			URL url = new URL(mBuf.toString());
 			InputStream is = url.openConnection().getInputStream();
 			return ApiUtil.convertStreamToString(is);
 		} catch (MalformedURLException e) {
+			e.printStackTrace();
 			throw new ApiException(e);
 		} catch (IOException e) {
+			e.printStackTrace();
 			throw new ApiException(e);
 		}
 
